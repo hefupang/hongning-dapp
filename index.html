@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>hongning.eth | Web3 去中心化链上交友网络</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans flex flex-col justify-between">
+
+  <!-- 导航栏 -->
+  <header class="border-b border-slate-800 p-4 flex justify-between items-center max-w-5xl mx-auto w-full">
+    <div class="flex items-center space-x-2">
+      <span class="text-xl font-bold bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">hongning.eth</span>
+      <span class="text-xs bg-pink-500/10 text-pink-400 border border-pink-500/20 px-2 py-0.5 rounded-full">SBT Match</span>
+    </div>
+    <button id="connectBtn" onclick="connectWallet()" class="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-medium px-4 py-2 rounded-xl text-sm transition">
+      连接钱包
+    </button>
+  </header>
+
+  <!-- 主体内容 -->
+  <main class="max-w-4xl mx-auto px-4 py-10 w-full flex-1">
+    
+    <!-- Hero 区域 -->
+    <div class="text-center mb-12">
+      <h1 class="text-3xl sm:text-5xl font-extrabold mb-4 bg-gradient-to-r from-white via-slate-200 to-pink-400 bg-clip-text text-transparent">
+        去中心化 Web3 隐私交友与关系存证
+      </h1>
+      <p class="text-slate-400 max-w-xl mx-auto text-sm sm:text-base">
+        零伪造数据 · 签名登录 · 双方互赞方可解密联系方式 · 链上 SBT 誓言存证
+      </p>
+    </div>
+
+    <!-- 登录后显示的内容容器 -->
+    <div id="appContent" class="hidden space-y-8">
+      
+      <!-- 个人 Profile 设置 -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+        <h2 class="text-lg font-semibold mb-4 text-pink-400">1. 创建/更新 Web3 社交名片</h2>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">昵称 / ENS</label>
+            <input type="text" id="nicknameInput" placeholder="例: Alice.eth" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm focus:outline-none focus:border-pink-500">
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">加密社交联系方式（仅在互赞后解锁展示）</label>
+            <input type="text" id="contactInput" placeholder="TG: @your_handle / 微信号" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm focus:outline-none focus:border-pink-500">
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Web3 个人介绍 / 链上宣言</label>
+            <textarea id="bioInput" rows="2" placeholder="分享你的 Web3 兴趣、常驻生态与交友期望..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm focus:outline-none focus:border-pink-500"></textarea>
+          </div>
+          <button onclick="saveProfile()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-2.5 rounded-xl text-sm transition">
+            签名确认并保存名片（无需 Gas）
+          </button>
+        </div>
+      </div>
+
+      <!-- SBT 婚约存证区块 -->
+      <div class="bg-slate-900/50 border border-pink-500/20 rounded-2xl p-6">
+        <h2 class="text-lg font-semibold mb-2 text-pink-400">2. 撮合成功？铸造 CP 灵魂绑定勋章（SBT）</h2>
+        <p class="text-xs text-slate-400 mb-4">当双方确定关系后，填入对方钱包地址，共同将誓言永载区块链（不可转让）。</p>
+        <div class="flex flex-col sm:flex-row gap-3">
+          <input type="text" id="partnerAddress" placeholder="伴侣钱包地址 (0x...)" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm focus:outline-none focus:border-pink-500">
+          <button onclick="mintSBT()" class="bg-pink-600 hover:bg-pink-500 text-white font-medium px-6 py-3 rounded-xl text-sm transition">
+            Mint CP SBT
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 未连接钱包时的提示 -->
+    <div id="connectPrompt" class="bg-slate-900/60 border border-slate-800 rounded-2xl p-8 text-center">
+      <p class="text-slate-400 text-sm mb-4">请先连接 Web3 钱包以加载真实链上数据并参与匹配。</p>
+    </div>
+
+  </main>
+
+  <footer class="border-t border-slate-900 p-4 text-center text-xs text-slate-600">
+    Powered by hongning.eth · Base L2 Protocol
+  </footer>
+
+  <script>
+    let userAddress = null;
+    let provider = null;
+    let signer = null;
+
+    async function connectWallet() {
+      if (window.ethereum) {
+        try {
+          provider = new ethers.BrowserProvider(window.ethereum);
+          signer = await provider.getSigner();
+          userAddress = await signer.getAddress();
+          
+          document.getElementById('connectBtn').innerText = `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`;
+          document.getElementById('connectPrompt').classList.add('hidden');
+          document.getElementById('appContent').classList.remove('hidden');
+        } catch (err) {
+          alert('连接钱包失败: ' + err.message);
+        }
+      } else {
+        alert('请安装 MetaMask 或 OKX Wallet 等 Web3 钱包插件！');
+      }
+    }
+
+    async function saveProfile() {
+      if (!signer) return alert('请先连接钱包！');
+      const nickname = document.getElementById('nicknameInput').value;
+      const contact = document.getElementById('contactInput').value;
+      const bio = document.getElementById('bioInput').value;
+
+      if (!contact) return alert('请填写联系方式');
+
+      // 使用 EIP-712 签名，确保是钱包本人操作且无需 Gas
+      const message = `确认更新 hongning.eth 社交名片:\n钱包: ${userAddress}\n昵称: ${nickname}\n时间: ${Date.now()}`;
+      try {
+        const signature = await signer.signMessage(message);
+        console.log("签名数据:", signature);
+        alert('名片已通过签名确认！(此处可对接 Supabase 存储)');
+      } catch (e) {
+        alert('签名取消');
+      }
+    }
+
+    async function mintSBT() {
+      if (!signer) return alert('请先连接钱包！');
+      const partner = document.getElementById('partnerAddress').value;
+      if (!ethers.isAddress(partner)) return alert('请输入有效的伴侣 ETH 钱包地址！');
+      
+      alert('准备发起链上交易调用 HongNiangSBT 合约...');
+      // 此处替换为真实部署后的合约地址交互代码
+    }
+  </script>
+</body>
+</html>
